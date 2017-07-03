@@ -22,7 +22,7 @@ static SystemVideo_Ivahd2ChMap_Tbl systemVid_encDecIvaChMapTbl =
         .EncChList = {0, 1, 4, 5},
 
         .DecNumCh  = 4,
-        .DecChList = {0, 1, 4, 5},
+        .DecChList = {0, 4, 5, 6},
     },
 
     .ivaMap[1] =
@@ -31,7 +31,7 @@ static SystemVideo_Ivahd2ChMap_Tbl systemVid_encDecIvaChMapTbl =
         .EncChList = {2, 6, 7, 8},
 
         .DecNumCh  = 4,
-        .DecChList = {2, 6, 7, 8},
+        .DecChList = {1, 2, 7, 8},
     },
 
     .ivaMap[2] =
