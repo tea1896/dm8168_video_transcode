@@ -17,7 +17,7 @@ BitsSaver saver;
 static void *bits_saver_thr_func(void *prm) {
     while (! saver.quit) {
         /* wait enc completed */
-        printf("Waiting encoded data ... \n");
+        //printf("Waiting encoded data ... \n");
         OSA_semWait(&saver.sem, OSA_TIMEOUT_FOREVER);
 
         /* get encoded data */
@@ -29,7 +29,7 @@ static void *bits_saver_thr_func(void *prm) {
         int i;
         for(i=0; i < bitsBuf.numBufs; i++) {      
             VCODEC_BITSBUF_S *pBuf = &bitsBuf.bitsBuf[i];
-            printf("Write encoded (%d) bytes in channel (%d) in file (%d) ... \n", pBuf->filledBufSize, pBuf->chnId, fileno(saver.fp[pBuf->chnId]));
+            //printf("Write encoded (%d) bytes in channel (%d) in file (%d) ... \n", pBuf->filledBufSize, pBuf->chnId, fileno(saver.fp[pBuf->chnId]));
             if(fwrite(pBuf->bufVirtAddr, 1, pBuf->filledBufSize, saver.fp[pBuf->chnId]) != pBuf->filledBufSize) 
             {
                 saver.quit = TRUE;

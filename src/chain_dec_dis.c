@@ -13,6 +13,8 @@ static UInt32 VPSS_LINK_ID_IPC_FRAME_OUT;
 #define     MAX_BUFFERING_QUEUE_LEN_PER_CH           (50)
 #define     BIT_BUF_LENGTH_LIMIT_FACTOR_HD            (5)
 
+
+/* 注意转码时，高清的解码和编码 尽量错开，不要集中在一个VIDEO M3上 */
 static SystemVideo_Ivahd2ChMap_Tbl systemVid_encDecIvaChMapTbl =
 {
     .isPopulated = 1,
@@ -66,6 +68,7 @@ void chain_dec_dis_create(int ch_num) {
 
     IpcLink_CreateParams        ipcOutVpssPrm;
     IpcLink_CreateParams        ipcInVideoPrm;
+    DeiLink_CreateParams        deiPrm;
     EncLink_CreateParams        encPrm;
     IpcBitsOutLinkRTOS_CreateParams   ipcBitsOutVideoPrm;
     IpcBitsInLinkHLOS_CreateParams    ipcBitsInHostPrm;
@@ -89,6 +92,7 @@ void chain_dec_dis_create(int ch_num) {
 
     MULTICH_INIT_STRUCT(IpcLink_CreateParams,ipcOutVpssPrm);
     MULTICH_INIT_STRUCT(IpcLink_CreateParams,ipcInVideoPrm);
+    MULTICH_INIT_STRUCT(DeiLink_CreateParams, deiPrm);
     MULTICH_INIT_STRUCT(EncLink_CreateParams, encPrm);
     MULTICH_INIT_STRUCT(IpcBitsOutLinkRTOS_CreateParams,ipcBitsOutVideoPrm);
     MULTICH_INIT_STRUCT(IpcBitsInLinkHLOS_CreateParams,ipcBitsInHostPrm);
@@ -118,13 +122,13 @@ void chain_dec_dis_create(int ch_num) {
     DSP_LINK_ID_ALG                 = SYSTEM_LINK_ID_ALG_0;
     DSP_LINK_ID_IPC_FRAME_IN        = SYSTEM_DSP_LINK_ID_IPC_FRAMES_IN_0;
     VPSS_LINK_ID_IPC_FRAME_OUT      = SYSTEM_VPSS_LINK_ID_IPC_FRAMES_OUT_0;
-    dupId                           = SYSTEM_VPSS_LINK_ID_DUP_0;
 
-    gVcapModuleContext.deiId[0]         = SYSTEM_LINK_ID_DEI_0;
+    gVcapModuleContext.deiId[0]         = SYSTEM_LINK_ID_DEI_HQ_0;
     gVencModuleContext.encId        = SYSTEM_LINK_ID_VENC_0;
     gVencModuleContext.ipcBitsOutRTOSId  = SYSTEM_VIDEO_LINK_ID_IPC_BITS_OUT_0;
     gVencModuleContext.ipcBitsInHLOSId   = SYSTEM_HOST_LINK_ID_IPC_BITS_IN_0;
-    UInt32 ipcOutVpssId = SYSTEM_VPSS_LINK_ID_IPC_OUT_M3_0;
+    dupId                           = SYSTEM_VPSS_LINK_ID_DUP_0;
+    UInt32 ipcOutVpssId = SYSTEM_VPSS_LINK_ID_IPC_OUT_M3_0;    
     UInt32 ipcInVideoId = SYSTEM_VIDEO_LINK_ID_IPC_IN_M3_0;
 
 
@@ -198,7 +202,6 @@ void chain_dec_dis_create(int ch_num) {
         decPrm.chCreateParams[i].tilerEnable = FALSE;
         decPrm.chCreateParams[i].enableWaterMarking = gVdecModuleContext.vdecConfig.decChannelParams[i].enableWaterMarking;
     }
-
     decPrm.inQueParams.prevLinkId       = gVdecModuleContext.ipcBitsInRTOSId;
     decPrm.inQueParams.prevLinkQueId    = 0;
     decPrm.outQueParams.nextLink        = gMultiCh_VdecVdisObj.ipcOutVideoId;
@@ -217,65 +220,72 @@ void chain_dec_dis_create(int ch_num) {
     ipcInVpssPrm.notifyNextLink            = TRUE;
     ipcInVpssPrm.notifyPrevLink            = TRUE;
     ipcInVpssPrm.numOutQue                 = 1;
-    //ipcInVpssPrm.outQueParams[0].nextLink   =  gVdisModuleContext.swMsId[0];
     ipcInVpssPrm.outQueParams[0].nextLink   =  VPSS_LINK_ID_IPC_FRAME_OUT;
 
-    /* OSD */
-    //ipcFramesOutVpssPrm.baseCreateParams.noNotifyMode = TRUE;
-    ipcFramesOutVpssPrm.baseCreateParams.noNotifyMode = FALSE;
-    ipcFramesOutVpssPrm.baseCreateParams.notifyPrevLink = TRUE;
-    ipcFramesOutVpssPrm.baseCreateParams.notifyNextLink = TRUE;
-    ipcFramesOutVpssPrm.baseCreateParams.inQueParams.prevLinkId = gMultiCh_VdecVdisObj.ipcInVpssId;
-    ipcFramesOutVpssPrm.baseCreateParams.inQueParams.prevLinkQueId = 0;
-    ipcFramesOutVpssPrm.baseCreateParams.numOutQue = 1;
-    ipcFramesOutVpssPrm.baseCreateParams.outQueParams[0].nextLink =  dupId;;
-    ipcFramesOutVpssPrm.baseCreateParams.processLink = DSP_LINK_ID_IPC_FRAME_IN;
+    /* OSD */      
+    ipcFramesOutVpssPrm.baseCreateParams.noNotifyMode = FALSE;    
+    ipcFramesOutVpssPrm.baseCreateParams.notifyPrevLink = TRUE;    
+    ipcFramesOutVpssPrm.baseCreateParams.notifyNextLink = TRUE;    
+    ipcFramesOutVpssPrm.baseCreateParams.inQueParams.prevLinkId = gMultiCh_VdecVdisObj.ipcInVpssId;    
+    ipcFramesOutVpssPrm.baseCreateParams.inQueParams.prevLinkQueId = 0;    
+    ipcFramesOutVpssPrm.baseCreateParams.numOutQue = 1;    
+    ipcFramesOutVpssPrm.baseCreateParams.outQueParams[0].nextLink =   gVcapModuleContext.deiId[0];;    
+    ipcFramesOutVpssPrm.baseCreateParams.processLink = DSP_LINK_ID_IPC_FRAME_IN;    
     ipcFramesOutVpssPrm.baseCreateParams.notifyProcessLink = TRUE;
-
-    //ipcFramesInDspPrm.baseCreateParams.noNotifyMode   = TRUE;
-    ipcFramesInDspPrm.baseCreateParams.noNotifyMode   = FALSE;
-    ipcFramesInDspPrm.baseCreateParams.notifyPrevLink = TRUE;
-    ipcFramesInDspPrm.baseCreateParams.notifyNextLink = TRUE;
-    ipcFramesInDspPrm.baseCreateParams.inQueParams.prevLinkId = VPSS_LINK_ID_IPC_FRAME_OUT;
-    ipcFramesInDspPrm.baseCreateParams.inQueParams.prevLinkQueId = 0;
-    ipcFramesInDspPrm.baseCreateParams.numOutQue   = 1;
+        
+    ipcFramesInDspPrm.baseCreateParams.noNotifyMode   = FALSE;    
+    ipcFramesInDspPrm.baseCreateParams.notifyPrevLink = TRUE;    
+    ipcFramesInDspPrm.baseCreateParams.notifyNextLink = TRUE;    
+    ipcFramesInDspPrm.baseCreateParams.inQueParams.prevLinkId = VPSS_LINK_ID_IPC_FRAME_OUT;    
+    ipcFramesInDspPrm.baseCreateParams.inQueParams.prevLinkQueId = 0;    
+    ipcFramesInDspPrm.baseCreateParams.numOutQue   = 1;    
     ipcFramesInDspPrm.baseCreateParams.outQueParams[0].nextLink = DSP_LINK_ID_ALG;
-
-    algPrms.inQueParams.prevLinkId = DSP_LINK_ID_IPC_FRAME_IN;
-    algPrms.inQueParams.prevLinkQueId = 0;
-    algPrms.enableOSDAlg = TRUE;
-    algPrms.osdChCreateParams[0].maxWidth = 500;
+    
+    algPrms.inQueParams.prevLinkId = DSP_LINK_ID_IPC_FRAME_IN;    
+    algPrms.inQueParams.prevLinkQueId = 0;    
+    algPrms.enableOSDAlg = TRUE;    
+    algPrms.osdChCreateParams[0].maxWidth = 500;    
     algPrms.osdChCreateParams[0].maxHeight = 300;
+    
 
-    dupPrm.inQueParams.prevLinkId         = VPSS_LINK_ID_IPC_FRAME_OUT;
-    dupPrm.inQueParams.prevLinkQueId      = 0;
-    dupPrm.numOutQue                      = 2;
-    dupPrm.outQueParams[0].nextLink       = ipcOutVpssId;
-    dupPrm.outQueParams[1].nextLink       = gVdisModuleContext.swMsId[0];
-    dupPrm.notifyNextLink                 = TRUE;
+    /* DEI link */
+    deiPrm.inQueParams.prevLinkId      = VPSS_LINK_ID_IPC_FRAME_OUT; 
+    deiPrm.inQueParams.prevLinkQueId   = 0;
+    deiPrm.enableOut[DEI_LINK_OUT_QUE_DEI_SC]                = FALSE;
+    /* 
+     此处选择 DEI_LINK_OUT_QUE_VIP_SC 而不是 DEI_LINK_OUT_QUE_DEI_SC 是因为 DEI_LINK_OUT_QUE_DEI_SC 只能输出 YUV422， 
+     而编码器要求必须是YUV420SP， 参考 : DVR_RDK_McFW_Link_API_Training.pdf  page:47
+    */
+    deiPrm.enableOut[DEI_LINK_OUT_QUE_VIP_SC]                = TRUE;  
+    deiPrm.enableOut[DEI_LINK_OUT_QUE_VIP_SC_SECONDARY_OUT]  = FALSE; 
+    deiPrm.outQueParams[DEI_LINK_OUT_QUE_VIP_SC].nextLink    = dupId;
+    deiPrm.tilerEnable[DEI_LINK_OUT_QUE_VIP_SC]              = FALSE;
+    deiPrm.comprEnable                                       = FALSE;
+    deiPrm.setVipScYuv422Format                              = FALSE;
+    deiPrm.enableDeiForceBypass = TRUE;
 
+    /* dup */
+    dupPrm.inQueParams.prevLinkId         = gVcapModuleContext.deiId[0];   
+    dupPrm.inQueParams.prevLinkQueId      = DEI_LINK_OUT_QUE_VIP_SC;  
+    dupPrm.numOutQue                      = 2;    
+    dupPrm.outQueParams[0].nextLink       = ipcOutVpssId;    
+    dupPrm.outQueParams[1].nextLink       = gVdisModuleContext.swMsId[0];  
 
     /* sw mosaic link */
-    swMsPrm[0].numSwMsInst = 1;
-    swMsPrm[0].swMsInstId[0]        = SYSTEM_SW_MS_SC_INST_DEI_SC_NO_DEI;
-    swMsPrm[0].swMsInstStartWin[0]  = 0;
-    swMsPrm[0].swMsInstStartWin[1]  = 10;
-    swMsPrm[0].enableProcessTieWithDisplay = TRUE;
-    swMsPrm[0].includeVipScInDrvPath = FALSE;
+    swMsPrm[0].inQueParams.prevLinkId    = dupId;
+    swMsPrm[0].inQueParams.prevLinkQueId = 1;
+    swMsPrm[0].numSwMsInst               = 1;
+    swMsPrm[0].swMsInstId[0]             = SYSTEM_SW_MS_SC_INST_DEI_SC_NO_DEI;
+    swMsPrm[0].includeVipScInDrvPath     = TRUE;
+    swMsPrm[0].outQueParams.nextLink     = gVdisModuleContext.displayId[0];
+    swMsPrm[0].maxInputQueLen            = 4; 
+    swMsPrm[0].maxOutRes                 = VSYS_STD_1080P_60;
+    swMsPrm[0].initOutRes                = gVdisModuleContext.vdisConfig.deviceParams[0].resolution;
+    swMsPrm[0].numOutBuf                 = 8;
+    swMsPrm[0].lineSkipMode              = FALSE;
+    swMsPrm[0].enableLayoutGridDraw      = gVdisModuleContext.vdisConfig.enableLayoutGridDraw;
+    MultiCh_swMsGetDefaultLayoutPrm(VDIS_DEV_HDMI, &swMsPrm[0], TRUE);
 
-    VDIS_DEV vdDevId = VDIS_DEV_HDMI;
-
-    swMsPrm[0].inQueParams.prevLinkId     = dupId;
-    swMsPrm[0].inQueParams.prevLinkQueId  = 1;
-    swMsPrm[0].outQueParams.nextLink      = gVdisModuleContext.displayId[0];
-    swMsPrm[0].numOutBuf                  = MULTICH_NUM_SWMS_MAX_BUFFERS;
-    swMsPrm[0].maxInputQueLen             = SYSTEM_SW_MS_INVALID_INPUT_QUE_LEN;
-    swMsPrm[0].maxOutRes                  = VSYS_STD_1080P_60;
-    swMsPrm[0].initOutRes                 = gVdisModuleContext.vdisConfig.deviceParams[VDIS_DEV_HDMI].resolution;
-    swMsPrm[0].lineSkipMode               = FALSE;
-    swMsPrm[0].enableLayoutGridDraw       = gVdisModuleContext.vdisConfig.enableLayoutGridDraw;
-
-    MultiCh_swMsGetDefaultLayoutPrm(vdDevId, &swMsPrm[0], FALSE);    /* both from 0-16 chnl */
 
     /* display link */
     displayPrm[0].inQueParams[0].prevLinkId    = gVdisModuleContext.swMsId[0];
@@ -301,7 +311,6 @@ void chain_dec_dis_create(int ch_num) {
     ipcInVideoPrm.notifyNextLink               = TRUE;
     ipcInVideoPrm.notifyPrevLink               = TRUE;
     ipcInVideoPrm.noNotifyMode                 = FALSE;
-
 
     /* Encode link */
     EncLink_CreateParams_Init(&encPrm);
@@ -352,6 +361,7 @@ void chain_dec_dis_create(int ch_num) {
     ipcBitsInHostPrm.baseCreateParams.inQueParams.prevLinkQueId = 0;
     MultiCh_ipcBitsInitCreateParams_BitsInHLOS(&ipcBitsInHostPrm);
 
+
     /* create link */
     System_linkCreate(gVdecModuleContext.ipcBitsOutHLOSId,&ipcBitsOutHostPrm,sizeof(ipcBitsOutHostPrm));
     System_linkCreate(gVdecModuleContext.ipcBitsInRTOSId,&ipcBitsInVideoPrm,sizeof(ipcBitsInVideoPrm));
@@ -360,17 +370,19 @@ void chain_dec_dis_create(int ch_num) {
     System_linkCreate(gMultiCh_VdecVdisObj.ipcOutVideoId, &ipcOutVideoPrm, sizeof(ipcOutVideoPrm));
     System_linkCreate(gMultiCh_VdecVdisObj.ipcInVpssId  , &ipcInVpssPrm, sizeof(ipcInVpssPrm));
 
-    System_linkCreate(VPSS_LINK_ID_IPC_FRAME_OUT, &ipcFramesOutVpssPrm, sizeof(ipcFramesOutVpssPrm));
-    System_linkCreate(DSP_LINK_ID_IPC_FRAME_IN, &ipcFramesInDspPrm, sizeof(ipcFramesInDspPrm));
+    System_linkCreate(VPSS_LINK_ID_IPC_FRAME_OUT, &ipcFramesOutVpssPrm, sizeof(ipcFramesOutVpssPrm));    
+    System_linkCreate(DSP_LINK_ID_IPC_FRAME_IN, &ipcFramesInDspPrm, sizeof(ipcFramesInDspPrm));    
     System_linkCreate(DSP_LINK_ID_ALG, &algPrms, sizeof(algPrms));
+
+    System_linkCreate(gVcapModuleContext.deiId[0], &deiPrm, sizeof(deiPrm));
     System_linkCreate(dupId, &dupPrm    , sizeof(dupPrm));
 
-    System_linkCreate(ipcOutVpssId, &ipcOutVpssPrm, sizeof(ipcOutVpssPrm));
-    System_linkCreate(ipcInVideoId, &ipcInVideoPrm, sizeof(ipcInVideoPrm));
-    System_linkCreate(gVencModuleContext.encId, &encPrm, sizeof(encPrm));
-    System_linkCreate(gVencModuleContext.ipcBitsOutRTOSId, &ipcBitsOutVideoPrm, sizeof(ipcBitsOutVideoPrm));
+    System_linkCreate(ipcOutVpssId, &ipcOutVpssPrm, sizeof(ipcOutVpssPrm));    
+    System_linkCreate(ipcInVideoId, &ipcInVideoPrm, sizeof(ipcInVideoPrm));    
+    System_linkCreate(gVencModuleContext.encId, &encPrm, sizeof(encPrm));    
+    System_linkCreate(gVencModuleContext.ipcBitsOutRTOSId, &ipcBitsOutVideoPrm, sizeof(ipcBitsOutVideoPrm));    
     System_linkCreate(gVencModuleContext.ipcBitsInHLOSId, &ipcBitsInHostPrm, sizeof(ipcBitsInHostPrm));
-
+    
     System_linkCreate(gVdisModuleContext.swMsId[0]  , &swMsPrm[0], sizeof(swMsPrm[0]));
     System_linkCreate(gVdisModuleContext.displayId[0], &displayPrm[0], sizeof(displayPrm[0]));
 
@@ -415,7 +427,7 @@ void chain_dec_dis_delete() {
     dupId        = SYSTEM_VPSS_LINK_ID_DUP_0;
 
     Vdec_delete();
-    Vdis_delete();;
+    Vdis_delete();
     System_linkDelete(gVdisModuleContext.swMsId[0]);
     System_linkDelete(dupId);
     System_linkDelete(DSP_LINK_ID_ALG);
