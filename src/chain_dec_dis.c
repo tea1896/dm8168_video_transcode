@@ -264,6 +264,23 @@ void chain_dec_dis_create(int ch_num) {
     deiPrm.setVipScYuv422Format                              = FALSE;
     deiPrm.enableDeiForceBypass = TRUE;
 
+    /* scaler : 1/2 scaling */
+    DeiLink_OutputScaleFactor outScaleFactorSc;
+    outScaleFactorSc.scaleMode = DEI_SCALE_MODE_RATIO;
+    outScaleFactorSc.ratio.widthRatio.numerator     = 1;
+    outScaleFactorSc.ratio.widthRatio.denominator   = 2;
+    outScaleFactorSc.ratio.heightRatio.numerator    = 1;
+    outScaleFactorSc.ratio.heightRatio.denominator  = 2;
+    int chId = 0;
+    for(chId=0; chId<ch_num; chId++)
+    {
+        deiPrm.outScaleFactor[DEI_LINK_OUT_QUE_VIP_SC][chId] = outScaleFactorSc;
+    }
+    deiPrm.inputFrameRate[DEI_LINK_OUT_QUE_VIP_SC]   = 30;
+    deiPrm.outputFrameRate[DEI_LINK_OUT_QUE_VIP_SC]  = 30;
+    deiPrm.numBufsPerCh[DEI_LINK_OUT_QUE_VIP_SC]     = 6;
+    deiPrm.generateBlankOut[DEI_LINK_OUT_QUE_VIP_SC] = FALSE;
+
     /* dup */
     dupPrm.inQueParams.prevLinkId         = gVcapModuleContext.deiId[0];   
     dupPrm.inQueParams.prevLinkQueId      = DEI_LINK_OUT_QUE_VIP_SC;  
@@ -360,7 +377,6 @@ void chain_dec_dis_create(int ch_num) {
     ipcBitsInHostPrm.baseCreateParams.inQueParams.prevLinkId    = gVencModuleContext.ipcBitsOutRTOSId;
     ipcBitsInHostPrm.baseCreateParams.inQueParams.prevLinkQueId = 0;
     MultiCh_ipcBitsInitCreateParams_BitsInHLOS(&ipcBitsInHostPrm);
-
 
     /* create link */
     System_linkCreate(gVdecModuleContext.ipcBitsOutHLOSId,&ipcBitsOutHostPrm,sizeof(ipcBitsOutHostPrm));
