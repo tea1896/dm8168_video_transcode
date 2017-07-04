@@ -70,14 +70,14 @@ Void Logo_init(UInt32 numCh)
     OSA_assert(actualReadSize == OSD_BUF_SIZE);
 }
 
-Void Logo_add()
+Void Logo_add(int ch_num)
 {
     Int chId;
     struct itimerval oneSec;
-    AlgLink_OsdChWinParams osdChParam[OSD_NUM_CH];
+    AlgLink_OsdChWinParams osdChParam[ch_num];
     UInt32 padingColor[3] = { 0x0, 0x80, 0x80 };
 
-    for(chId = 0; chId < OSD_NUM_CH; chId++)
+    for(chId = 0; chId < ch_num; chId++)
     {
         AlgLink_OsdChWinParams * chWinPrm = &osdChParam[chId];
 

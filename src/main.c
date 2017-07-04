@@ -16,7 +16,7 @@
 
 Void Logo_init();
 Void Logo_deInit();
-Void Logo_add();
+Void Logo_add(int ch_num);
 
 void bits_saver_create(int channels, char *f_ext);
 void bits_saver_delete();
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     Vdec_start();
 
     /* load logo file */
-    Logo_add();
+    Logo_add(ch_num);
 
     /* h264 file feeder */
     file_feeder_create(path_data, path_header, width * height, ch_num);
