@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
     /* start components in reverse order */
     Vdis_start();
     Venc_start();
+    Vcap_start();
     Vdec_start();
 
     /* load logo file */
@@ -126,9 +127,16 @@ int main(int argc, char **argv) {
     /* stop components */
     Logo_deInit();
     file_feeder_stop();
+    usleep(500000);
     Vdec_stop();
-    Venc_stop();
+    usleep(100000);
+    Vcap_stop();
+    usleep(100000);
     Vdis_stop();
+    usleep(100000);
+    Venc_stop();
+    usleep(100000);
+    
     
 
     /* de-initialize components */
